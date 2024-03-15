@@ -38,6 +38,10 @@ public class GamePanel extends JPanel implements Runnable {
     public static ArrayList<Piece> simPieces = new ArrayList<>();
     Piece activePiece;
 
+    // Booleans
+    boolean canMove;
+    boolean validSquare;
+
     public GamePanel() {
         setPreferredSize(new Dimension(WIDTH, HEIGHT));
         setBackground(Color.BLACK);
@@ -149,18 +153,39 @@ public class GamePanel extends JPanel implements Runnable {
             }
         } else {
             if (activePiece != null) {
-                activePiece.updatePosition();
-                activePiece = null;
+                if (validSquare) { // Move Confirmed
+                    copyPieces(simPieces, pieces); // Update piece List in case of captured and removed during simulation!
+                    activePiece.updatePosition();
+                } else { // Invalid Move -> RESET
+                    copyPieces(pieces, simPieces);
+                    activePiece.resetPosition();
+                    activePiece = null;
+                }
             }
         }
     }
 
     private void simulate() {
+        canMove = false;
+        validSquare = false;
+
+        // Reset Piece List. For restoring the removed piece during simulation!
+        copyPieces(pieces, simPieces); 
+
         activePiece.x = mouse.x - Board.HALF_SQUARE_SIZE;
         activePiece.y = mouse.y - Board.HALF_SQUARE_SIZE;
-
         activePiece.col = activePiece.getCol(activePiece.x);
         activePiece.row = activePiece.getRow(activePiece.y);
+
+        if (activePiece.canMove(activePiece.col, activePiece.row)) {
+            canMove = true;
+
+            if (activePiece.hittingPiece != null) {
+                simPieces.remove(activePiece.hittingPiece.getIndex());
+            }
+
+            validSquare = true;
+        }
     }
 
     public void paintComponent(Graphics graphics) {
@@ -177,10 +202,12 @@ public class GamePanel extends JPanel implements Runnable {
         }
 
         if (activePiece != null) {
-            graphics2d.setColor(Color.YELLOW);
-            graphics2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.65f));
-            graphics2d.fillRect(activePiece.col*Board.SQUARE_SIZE, activePiece.row*Board.SQUARE_SIZE, Board.SQUARE_SIZE, Board.SQUARE_SIZE);
-            graphics2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
+            if (canMove) {
+                graphics2d.setColor(Color.YELLOW);
+                graphics2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.65f));
+                graphics2d.fillRect(activePiece.col*Board.SQUARE_SIZE, activePiece.row*Board.SQUARE_SIZE, Board.SQUARE_SIZE, Board.SQUARE_SIZE);
+                graphics2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
+            }
 
             activePiece.draw(graphics2d);
         }
