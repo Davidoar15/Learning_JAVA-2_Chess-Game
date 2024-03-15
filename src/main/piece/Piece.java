@@ -2,20 +2,22 @@ package main.piece;
 
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
-
 import javax.imageio.ImageIO;
 
 import main.board.Board;
 import main.gamepanel.GamePanel;
+import main.typepiece.Type;
 
 public class Piece {
     
+    public Type type;
+
     public BufferedImage image;
     public int x, y;
     public int col, row, preCol, preRow;
     public int color;
     public Piece hittingPiece;
-    public boolean moved;
+    public boolean moved, twoStepped;
 
     public Piece(int color, int col, int row) {
         this.color = color;
@@ -66,9 +68,15 @@ public class Piece {
     }
 
     public void updatePosition() {
+        // Check En Passant
+        if (type == Type.PAWN) {
+            if (Math.abs(row - preRow) == 2) {
+                twoStepped = true;
+            }
+        }
+
         x = getX(col);
         y = getY(row);
-
         preCol = getCol(x);
         preRow = getRow(y);
 
@@ -78,7 +86,6 @@ public class Piece {
     public void resetPosition() {
         col = preCol;
         row = preRow;
-
         x = getX(col);
         y = getY(row);
     }

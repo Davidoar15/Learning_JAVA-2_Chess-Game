@@ -11,12 +11,13 @@ import main.piece.gamepiece.Queen;
 import main.piece.gamepiece.Rook;
 
 import javax.swing.JPanel;
-
 import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.util.ArrayList;
 
 public class GamePanel extends JPanel implements Runnable {
@@ -37,6 +38,7 @@ public class GamePanel extends JPanel implements Runnable {
     public static ArrayList<Piece> pieces = new ArrayList<>();
     public static ArrayList<Piece> simPieces = new ArrayList<>();
     Piece activePiece;
+    public static Piece castlingPiece;
 
     // Booleans
     boolean canMove;
@@ -156,6 +158,12 @@ public class GamePanel extends JPanel implements Runnable {
                 if (validSquare) { // Move Confirmed
                     copyPieces(simPieces, pieces); // Update piece List in case of captured and removed during simulation!
                     activePiece.updatePosition();
+
+                    if (castlingPiece != null) {
+                        castlingPiece.updatePosition();
+                    }
+
+                    changePlayer();
                 } else { // Invalid Move -> RESET
                     copyPieces(pieces, simPieces);
                     activePiece.resetPosition();
@@ -172,6 +180,13 @@ public class GamePanel extends JPanel implements Runnable {
         // Reset Piece List. For restoring the removed piece during simulation!
         copyPieces(pieces, simPieces); 
 
+        // Reset Castling Piece's Position
+        if (castlingPiece != null) {
+            castlingPiece.col = castlingPiece.preCol;
+            castlingPiece.x = castlingPiece.getX(castlingPiece.col);
+            castlingPiece = null;
+        }
+
         activePiece.x = mouse.x - Board.HALF_SQUARE_SIZE;
         activePiece.y = mouse.y - Board.HALF_SQUARE_SIZE;
         activePiece.col = activePiece.getCol(activePiece.x);
@@ -184,8 +199,45 @@ public class GamePanel extends JPanel implements Runnable {
                 simPieces.remove(activePiece.hittingPiece.getIndex());
             }
 
+            checkCastling();
+
             validSquare = true;
         }
+    }
+
+    private void checkCastling() {
+        if (castlingPiece != null) {
+            if (castlingPiece.col == 0) {
+                castlingPiece.col += 3;
+            } else if (castlingPiece.col == 7) {
+                castlingPiece.col -= 2;
+            }
+            castlingPiece.x = castlingPiece.getX(castlingPiece.col);
+        }
+    }
+
+    private void changePlayer() {
+        if (currentColor == WHITE) {
+            currentColor = BLACK;
+
+            // Reset Two Stepped Status (Black)
+            for (Piece piece : pieces) {
+                if (piece.color == BLACK) {
+                    piece.twoStepped = false;
+                }
+            }
+        } else {
+            currentColor = WHITE;
+
+            // Reset Two Stepped Status (White)
+            for (Piece piece : pieces) {
+                if (piece.color == WHITE) {
+                    piece.twoStepped = false;
+                }
+            }
+        }
+
+        activePiece = null;
     }
 
     public void paintComponent(Graphics graphics) {
@@ -210,6 +262,17 @@ public class GamePanel extends JPanel implements Runnable {
             }
 
             activePiece.draw(graphics2d);
+        }
+
+        // Messages
+        graphics2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        graphics2d.setFont(new Font("Book Antiqua", Font.PLAIN, 30));
+        graphics2d.setColor(Color.WHITE);
+
+        if (currentColor == WHITE) {
+            graphics2d.drawString("Whites's Turn!", 680, 580);
+        } else {
+            graphics2d.drawString("Blacks's Turn!", 680, 100);
         }
     }
 }

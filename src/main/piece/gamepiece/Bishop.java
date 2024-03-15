@@ -2,11 +2,14 @@ package main.piece.gamepiece;
 
 import main.gamepanel.GamePanel;
 import main.piece.Piece;
+import main.typepiece.Type;
 
 public class Bishop extends Piece {
 
     public Bishop(int color, int col, int row) {
         super(color, col, row);
+
+        type = Type.BISHOP;
 
         if (color == GamePanel.WHITE) {
             image = getImage("white/bishop-white");

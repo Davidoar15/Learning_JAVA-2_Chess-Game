@@ -2,11 +2,14 @@ package main.piece.gamepiece;
 
 import main.gamepanel.GamePanel;
 import main.piece.Piece;
+import main.typepiece.Type;
 
 public class Queen extends Piece {
 
     public Queen(int color, int col, int row) {
         super(color, col, row);
+
+        type = Type.QUEEN;
 
         if (color == GamePanel.WHITE) {
             image = getImage("white/queen-white");
