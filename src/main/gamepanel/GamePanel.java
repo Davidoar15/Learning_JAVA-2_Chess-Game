@@ -9,6 +9,7 @@ import main.piece.gamepiece.Knight;
 import main.piece.gamepiece.Pawn;
 import main.piece.gamepiece.Queen;
 import main.piece.gamepiece.Rook;
+import main.typepiece.Type;
 
 import javax.swing.JPanel;
 import java.awt.AlphaComposite;
@@ -37,12 +38,14 @@ public class GamePanel extends JPanel implements Runnable {
     // Pieces
     public static ArrayList<Piece> pieces = new ArrayList<>();
     public static ArrayList<Piece> simPieces = new ArrayList<>();
+    ArrayList<Piece> promotionPieces = new ArrayList<>();
     Piece activePiece;
     public static Piece castlingPiece;
 
     // Booleans
     boolean canMove;
     boolean validSquare;
+    boolean promotion;
 
     public GamePanel() {
         setPreferredSize(new Dimension(WIDTH, HEIGHT));
@@ -139,35 +142,45 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     private void update() {
-        if (mouse.pressed) {
-            if (activePiece == null) {
-                for (Piece piece : simPieces) {
-                    if (
-                        piece.color == currentColor && 
-                        piece.col == mouse.x/Board.SQUARE_SIZE && 
-                        piece.row == mouse.y/Board.SQUARE_SIZE
-                    ) {
-                        activePiece = piece;
-                    } 
+
+        if (promotion) {
+            promoting();
+        } else {
+            if (mouse.pressed) {
+                if (activePiece == null) {
+                    for (Piece piece : simPieces) {
+                        if (
+                            piece.color == currentColor && 
+                            piece.col == mouse.x/Board.SQUARE_SIZE && 
+                            piece.row == mouse.y/Board.SQUARE_SIZE
+                        ) {
+                            activePiece = piece;
+                        } 
+                    }
+                } else {
+                    simulate();
                 }
             } else {
-                simulate();
-            }
-        } else {
-            if (activePiece != null) {
-                if (validSquare) { // Move Confirmed
-                    copyPieces(simPieces, pieces); // Update piece List in case of captured and removed during simulation!
-                    activePiece.updatePosition();
-
-                    if (castlingPiece != null) {
-                        castlingPiece.updatePosition();
+                if (activePiece != null) {
+                    if (validSquare) { // Move Confirmed
+                        copyPieces(simPieces, pieces); // Update piece List in case of captured and removed during simulation!
+                        activePiece.updatePosition();
+    
+                        if (castlingPiece != null) {
+                            castlingPiece.updatePosition();
+                        }
+    
+                        if (canPromove()) {
+                            promotion = true;
+                        } else {
+                            changePlayer();
+                        }
+    
+                    } else { // Invalid Move -> RESET
+                        copyPieces(pieces, simPieces);
+                        activePiece.resetPosition();
+                        activePiece = null;
                     }
-
-                    changePlayer();
-                } else { // Invalid Move -> RESET
-                    copyPieces(pieces, simPieces);
-                    activePiece.resetPosition();
-                    activePiece = null;
                 }
             }
         }
@@ -240,6 +253,61 @@ public class GamePanel extends JPanel implements Runnable {
         activePiece = null;
     }
 
+    private boolean canPromove() {
+        if (activePiece.type == Type.PAWN) {
+            if (
+                currentColor == WHITE && activePiece.row == 0 || 
+                currentColor == BLACK && activePiece.row == 7
+            ) {
+                promotionPieces.clear();
+
+                promotionPieces.add(new Knight(currentColor, 9, 2));
+                promotionPieces.add(new Bishop(currentColor, 9, 3));
+                promotionPieces.add(new Rook(currentColor, 9, 4));
+                promotionPieces.add(new Queen(currentColor, 9, 5));
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void promoting() {
+        if (mouse.pressed) {
+            for (Piece piece : promotionPieces) {
+                if (piece.col == mouse.x/Board.SQUARE_SIZE && piece.row == mouse.y/Board.SQUARE_SIZE) {
+                    switch (piece.type) {
+                        case KNIGHT:
+                            simPieces.add(new Knight(currentColor, activePiece.col, activePiece.row));
+                            break;
+                    
+                        case BISHOP:
+                            simPieces.add(new Bishop(currentColor, activePiece.col, activePiece.row));
+                            break;
+
+                        case ROOK:
+                            simPieces.add(new Rook(currentColor, activePiece.col, activePiece.row));
+                            break;
+
+                        case QUEEN:
+                            simPieces.add(new Queen(currentColor, activePiece.col, activePiece.row));
+                            break;
+
+                        default:
+                            break;
+                    }
+                    simPieces.remove(activePiece.getIndex());
+                    copyPieces(simPieces, pieces);
+
+                    activePiece = null;
+                    promotion = false;
+                    changePlayer();
+                }
+            }
+        }
+    }
+
     public void paintComponent(Graphics graphics) {
         super.paintComponent(graphics);
 
@@ -269,10 +337,22 @@ public class GamePanel extends JPanel implements Runnable {
         graphics2d.setFont(new Font("Book Antiqua", Font.PLAIN, 30));
         graphics2d.setColor(Color.WHITE);
 
-        if (currentColor == WHITE) {
-            graphics2d.drawString("Whites's Turn!", 680, 580);
+        if (promotion) {
+            graphics2d.drawString("Promote To...!", 680, 120);
+            for (Piece piece : promotionPieces) {
+                graphics2d.drawImage(piece.image, piece.getX(piece.col), piece.getY(piece.row), Board.SQUARE_SIZE, Board.SQUARE_SIZE, null);
+                
+                graphics2d.setColor(Color.WHITE);
+                graphics2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.2f));
+                graphics2d.fillRect(piece.getX(piece.col), piece.getY(piece.row), Board.SQUARE_SIZE, Board.SQUARE_SIZE);
+                graphics2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
+            }
         } else {
-            graphics2d.drawString("Blacks's Turn!", 680, 100);
+            if (currentColor == WHITE) {
+                graphics2d.drawString("Whites's Turn!", 680, 580);
+            } else {
+                graphics2d.drawString("Blacks's Turn!", 680, 100);
+            }
         }
     }
 }
